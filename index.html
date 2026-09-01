@@ -390,27 +390,40 @@
     let praiseCounts = JSON.parse(localStorage.getItem('goodpet_praise_counts')) || {};
 
     // Init Web Speech API
-    function populateVoices() {
+      function populateVoices() {
       if (!('speechSynthesis' in window)) return;
-      availableVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+      
+      // Grab all voices
+      let voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) return;
+
+      // Filter for English voices
+      availableVoices = voices.filter(v => v.lang.startsWith('en'));
+      
+      // Sort them to push Google's "Network" or higher quality voices to the top
+      availableVoices.sort((a, b) => {
+        if (a.name.includes('Network') || a.name.includes('Online')) return -1;
+        if (b.name.includes('Network') || b.name.includes('Online')) return 1;
+        return 0;
+      });
+
       const select = document.getElementById('voiceSelect');
       select.innerHTML = '';
       
       availableVoices.forEach((voice) => {
         const option = document.createElement('option');
         option.value = voice.voiceURI;
-        option.textContent = `${voice.name} (${voice.lang})`;
+        // Add a star to network voices so you can spot them easily
+        const isNetwork = voice.name.includes('Network') ? '⭐ ' : '';
+        option.textContent = `${isNetwork}${voice.name} (${voice.lang})`;
+        
         if (selectedVoiceURI && voice.voiceURI === selectedVoiceURI) {
           option.selected = true;
         }
         select.appendChild(option);
       });
     }
-
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.onvoiceschanged = populateVoices;
-      populateVoices();
-    }
+    
 
     function formatPhrase(template, pet) {
       const goodBoyGirl = pet.gender === 'BOY' ? 'good boy' : (pet.gender === 'GIRL' ? 'good girl' : 'good pet');

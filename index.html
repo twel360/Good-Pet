@@ -3,16 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  
+  <!-- PWA Magic -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#16222F">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Good Pet">
+  
   <title>Good Pet</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
   <style>
     /* Strictly lock the viewport to prevent mobile scrolling & bouncing */
     html, body {
@@ -28,13 +34,26 @@
     .custom-gradient {
       background: linear-gradient(180deg, #3A6073 0%, #16222F 100%);
     }
-    /* Hide scrollbar for the pet chips if they overflow horizontally */
+    /* Hide scrollbar for the pet chips */
     .scrollbar-none::-webkit-scrollbar {
       display: none;
     }
     .scrollbar-none {
       -ms-overflow-style: none;
       scrollbar-width: none;
+    }
+    /* Floating Heart Animation */
+    @keyframes floatUp {
+      0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-120px) scale(1.5) rotate(20deg); opacity: 0; }
+    }
+    .floating-heart {
+      position: absolute;
+      animation: floatUp 1s ease-out forwards;
+      pointer-events: none;
+      font-size: 2rem;
+      z-index: 50;
+      text-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
   </style>
 </head>
@@ -65,10 +84,18 @@
 
     <!-- Central Phrase Card -->
     <div class="relative z-10 flex flex-col items-center justify-center w-full max-w-6xl mx-auto flex-1 min-h-0 py-4 sm:py-8">
+      
+      <!-- The Love Meter -->
+      <div class="mb-3 px-4 py-1.5 bg-black/30 rounded-full border border-white/10 shadow-sm flex items-center gap-2">
+        <i data-lucide="heart" class="w-4 h-4 text-pink-400"></i>
+        <span id="praiseCounterDisplay" class="text-xs sm:text-sm font-bold text-pink-200">Praised 0 times</span>
+      </div>
+
       <div 
-        onclick="speakCurrentPhrase()" 
-        class="w-full h-full bg-black/40 hover:bg-black/50 active:scale-[0.98] transition-all cursor-pointer rounded-3xl sm:rounded-[3rem] p-6 sm:p-12 border border-white/10 shadow-xl flex items-center justify-center text-center overflow-y-auto scrollbar-none">
-        <p id="phraseText" class="text-2xl sm:text-4xl md:text-5xl lg:text-7xl font-extrabold leading-snug sm:leading-tight tracking-tight m-auto">
+        id="phraseCard"
+        onclick="speakCurrentPhrase(event)" 
+        class="w-full h-full bg-black/40 hover:bg-black/50 active:scale-[0.98] transition-all cursor-pointer rounded-3xl sm:rounded-[3rem] p-6 sm:p-12 border border-white/10 shadow-xl flex items-center justify-center text-center overflow-y-auto scrollbar-none relative">
+        <p id="phraseText" class="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-snug sm:leading-tight tracking-tight m-auto">
           Loading...
         </p>
       </div>
@@ -247,8 +274,11 @@
         </div>
 
         <!-- Voice Selector -->
-        <div class="flex flex-col gap-1">
-          <span class="text-xs text-slate-400 font-semibold">Voice Engine</span>
+        <div class="flex flex-col gap-1 mt-1">
+          <div class="flex flex-col">
+            <span class="text-xs text-slate-400 font-semibold">Voice Engine</span>
+            <span class="text-[11px] text-slate-500 italic mb-1">These voices are loaded directly from your device.</span>
+          </div>
           <select id="voiceSelect" class="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs focus:outline-none focus:border-indigo-500 text-white">
             <!-- Populated via Web Speech API -->
           </select>
@@ -270,7 +300,7 @@
           <p><strong>✨ Quick Praise:</strong> Tap the big card or 'Random Praise' to hear a compliment. 'Surprise Me!' grabs new phrases automatically.</p>
           <p><strong>🎙️ Voices:</strong> Choose from any browser voice installed on your phone or laptop and tweak the pitch or speed.</p>
           <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-700/50">
-            <p class="text-[11px] text-slate-400">🔒 <strong>Privacy:</strong> All pet names, custom compliments, and background photos stay 100% saved in your own browser's local storage.</p>
+            <p class="text-sm text-slate-300">🔒 <strong>Privacy:</strong> All pet names, custom compliments, and background photos stay 100% saved in your own browser's local storage.</p>
           </div>
         </div>
         <button onclick="closeModal('helpModal')" class="w-full py-2 bg-indigo-500 hover:bg-indigo-600 rounded-xl font-bold text-xs">Got it!</button>
@@ -290,6 +320,7 @@
       "Look at {name}, {he_she_they} did such a great job!"
     ];
 
+    // The Offline AI Brain: A massive array of diverse praise!
     const SUGGESTIONS_POOL = [
       "Who's a {good_boy_girl}? {name} is!",
       "{name} is such a smart {good_boy_girl}.",
@@ -307,7 +338,40 @@
       "{name} is the most precious {good_boy_girl}.",
       "11 out of 10 for {name}!",
       "Such a polite {good_boy_girl}.",
-      "{name} makes every day better!"
+      "{name} makes every day better!",
+      "Excuse me, but {name} is illegally cute.",
+      "If being adorable was a crime, {name} would be guilty.",
+      "Look at {name} go! What a superstar.",
+      "I didn't know it was possible to love a {good_boy_girl} this much.",
+      "{name} is absolutely thriving today.",
+      "Hold the applause... actually, give all the applause to {name}!",
+      "Is {name} a model? Because wow.",
+      "{name} is the main character of this house.",
+      "Just checking in to confirm that {name} is still perfect.",
+      "{name} is a certified snuggler.",
+      "Nobody does it quite like {name}.",
+      "A round of applause for {name}’s excellent behavior!",
+      "{name} is 100% pure joy.",
+      "There is no one quite like our {name}.",
+      "{name} is bringing all the good vibes.",
+      "Can we just appreciate how soft and sweet {name} is?",
+      "{name} is officially the employee of the month.",
+      "If {name} ran for president, I would vote for {him_her_them}.",
+      "How did we get so lucky to have {name}?",
+      "{name} is out here stealing hearts.",
+      "Alert the media! {name} is being perfectly adorable.",
+      "{name} is the absolute definition of a {good_boy_girl}.",
+      "I am {his_her_their} biggest fan.",
+      "Everything {name} does is a masterpiece.",
+      "Who needs therapy when you have {name}?",
+      "{name} is the undisputed champion of my heart.",
+      "Please respect {name}’s privacy, {he_she_they} is too famous.",
+      "I could watch {name} sleep all day long.",
+      "{name} deserves a Michelin star for being so {handsome_pretty}.",
+      "In a world of chaos, there is {name}.",
+      "Did you know {name} holds the world record for cuteness?",
+      "Can someone give {name} a medal already?",
+      "{name} is a flawless creature of the universe."
     ];
 
     // State
@@ -321,6 +385,9 @@
     let voiceSpeed = parseFloat(localStorage.getItem('goodpet_voice_speed')) || 1.0;
     let selectedVoiceURI = localStorage.getItem('goodpet_selected_voice') || null;
     let availableVoices = [];
+    
+    // Praise Counter State
+    let praiseCounts = JSON.parse(localStorage.getItem('goodpet_praise_counts')) || {};
 
     // Init Web Speech API
     function populateVoices() {
@@ -415,6 +482,10 @@
       document.getElementById('phraseText').textContent = formatted;
       document.getElementById('phraseCounter').textContent = `${currentPhraseIndex + 1} / ${customPhrases.length}`;
 
+      // Update Love Meter
+      const count = praiseCounts[selectedPetId] || 0;
+      document.getElementById('praiseCounterDisplay').textContent = `Praised ${count} times!`;
+
       lucide.createIcons();
     }
 
@@ -441,10 +512,52 @@
       window.speechSynthesis.speak(utterance);
     }
 
-    function speakCurrentPhrase() {
+    // Spawn floating hearts
+    function createHeart(e) {
+      if (!e) return;
+      const heart = document.createElement('div');
+      heart.innerHTML = ['❤️', '💖', '✨', '🐾'][Math.floor(Math.random() * 4)];
+      heart.className = 'floating-heart';
+      
+      // Calculate position based on touch or click
+      const card = document.getElementById('phraseCard');
+      const rect = card.getBoundingClientRect();
+      const x = (e.clientX || (e.touches && e.touches[0].clientX) || rect.left + rect.width / 2) - 15;
+      const y = (e.clientY || (e.touches && e.touches[0].clientY) || rect.top + rect.height / 2) - 15;
+      
+      heart.style.left = `${x}px`;
+      heart.style.top = `${y}px`;
+      
+      document.body.appendChild(heart);
+      
+      // Clean up after animation
+      setTimeout(() => heart.remove(), 1000);
+    }
+
+    // Triggered when clicking the main card or buttons
+    function speakCurrentPhrase(event = null) {
       const pet = getActivePet();
       const text = formatPhrase(customPhrases[currentPhraseIndex], pet);
+      
+      // 1. Speak the phrase
       speak(text);
+      
+      // 2. Increment and save the Love Meter
+      if (!praiseCounts[selectedPetId]) praiseCounts[selectedPetId] = 0;
+      praiseCounts[selectedPetId]++;
+      localStorage.setItem('goodpet_praise_counts', JSON.stringify(praiseCounts));
+      updateUI();
+      
+      // 3. Fire Confetti!
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#6366f1', '#ec4899', '#ffffff', '#cbd5e1']
+      });
+
+      // 4. Fire Floating Heart
+      if (event) createHeart(event);
     }
 
     function prevPhrase() {

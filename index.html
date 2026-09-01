@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Good Pet</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .custom-gradient {
+      background: linear-gradient(180deg, #3A6073 0%, #16222F 100%);
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-0 sm:p-4">
+
+  <!-- Main Mobile-Sized Container -->
+  <div id="appContainer" class="relative w-full max-w-md h-[100dvh] sm:h-[844px] sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between p-6 custom-gradient">
+    
+    <!-- Background Image Layer -->
+    <div id="petBackground" class="absolute inset-0 bg-cover bg-center hidden">
+      <div class="absolute inset-0 bg-black/45 backdrop-blur-[2px]"></div>
+    </div>
+
+    <!-- Top Navigation & Pet Bar -->
+    <div class="relative z-10 flex flex-col items-center gap-3 pt-2">
+      <div class="w-full flex items-center justify-between">
+        <span class="text-[11px] font-bold tracking-[0.18em] text-white/70 uppercase">Every Pet Is A Good Pet</span>
+        <button onclick="openModal('helpModal')" class="p-1.5 rounded-full hover:bg-white/10 text-white/70 transition">
+          <i data-lucide="help-circle" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Pet Chips Carousel -->
+      <div class="w-full flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none" id="petChipsContainer">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Central Phrase Card -->
+    <div class="relative z-10 flex flex-col items-center justify-center my-auto w-full">
+      <div 
+        onclick="speakCurrentPhrase()" 
+        class="w-full bg-black/40 hover:bg-black/50 active:scale-[0.98] transition-all cursor-pointer rounded-3xl p-8 border border-white/10 shadow-lg min-h-[220px] flex items-center justify-center text-center">
+        <p id="phraseText" class="text-2xl sm:text-3xl font-extrabold leading-snug tracking-tight">
+          Loading...
+        </p>
+      </div>
+
+      <!-- Phrase Navigation -->
+      <div class="flex items-center justify-center gap-6 mt-4">
+        <button onclick="prevPhrase()" class="p-2.5 rounded-full bg-black/30 hover:bg-black/50 active:scale-95 transition">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        </button>
+        <span id="phraseCounter" class="text-xs font-semibold text-white/80">1 / 1</span>
+        <button onclick="nextPhrase()" class="p-2.5 rounded-full bg-black/30 hover:bg-black/50 active:scale-95 transition">
+          <i data-lucide="arrow-right" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom Action Buttons -->
+    <div class="relative z-10 flex flex-col items-center gap-2.5 pb-2 w-full">
+      <button 
+        onclick="randomPraise()" 
+        class="w-full py-3.5 px-4 bg-indigo-500 hover:bg-indigo-600 active:scale-[0.98] transition font-bold rounded-2xl flex items-center justify-center gap-2 shadow-md">
+        <i data-lucide="shuffle" class="w-5 h-5"></i>
+        Random Praise!
+      </button>
+
+      <button 
+        onclick="surpriseMe()" 
+        class="w-full py-3.5 px-4 bg-slate-800 hover:bg-slate-700 active:scale-[0.98] transition font-bold text-indigo-200 rounded-2xl flex items-center justify-center gap-2 border border-white/10 shadow-md">
+        <i data-lucide="sparkles" class="w-5 h-5"></i>
+        Surprise Me!
+      </button>
+
+      <!-- Action Mini Buttons -->
+      <div class="flex items-center gap-2 w-full mt-1">
+        <button onclick="openModal('phraseListModal')" class="flex-1 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition text-xs font-semibold flex items-center justify-center gap-1.5 border border-white/10">
+          <i data-lucide="list" class="w-4 h-4"></i> List
+        </button>
+        <button onclick="openModal('addPhraseModal')" class="flex-1 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition text-xs font-semibold flex items-center justify-center gap-1.5 border border-white/10">
+          <i data-lucide="plus" class="w-4 h-4"></i> Add
+        </button>
+        <button onclick="openModal('voiceModal')" class="flex-1 py-2 px-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition text-xs font-semibold flex items-center justify-center gap-1.5 border border-white/10">
+          <i data-lucide="sliders" class="w-4 h-4"></i> Voice
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL: Edit Pet -->
+    <div id="editPetModal" class="hidden absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-3xl p-6 flex flex-col gap-4 shadow-2xl">
+        <h3 class="text-lg font-bold">Manage Pet</h3>
+        <div>
+          <label class="text-xs text-slate-400 font-semibold">Pet Name</label>
+          <input type="text" id="editPetName" class="w-full mt-1 p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm focus:outline-none focus:border-indigo-500" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 font-semibold mb-1 block">Gender / Pronouns</label>
+          <div class="flex justify-between gap-2 text-xs">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="editGender" value="BOY" class="accent-indigo-500" /> Boy
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="editGender" value="GIRL" class="accent-indigo-500" /> Girl
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="editGender" value="UNSPECIFIED" class="accent-indigo-500" /> Unspecified
+            </label>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2 pt-2">
+          <label class="w-full py-2.5 px-4 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-semibold text-center cursor-pointer transition flex items-center justify-center gap-2">
+            <i data-lucide="image" class="w-4 h-4"></i> Set Photo Background
+            <input type="file" accept="image/*" class="hidden" onchange="handlePetPhoto(event)" />
+          </label>
+          <button id="removePhotoBtn" onclick="removePetPhoto()" class="text-xs text-red-400 hover:text-red-300 py-1 transition">Remove Photo</button>
+          <button id="deletePetBtn" onclick="deleteActivePet()" class="text-xs text-red-500 hover:text-red-400 py-1 transition">Delete Pet Profile</button>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-2">
+          <button onclick="closeModal('editPetModal')" class="px-4 py-2 text-xs text-slate-300 hover:text-white">Cancel</button>
+          <button onclick="savePetEdit()" class="px-4 py-2 text-xs bg-indigo-500 hover:bg-indigo-600 rounded-xl font-bold">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Add Pet -->
+    <div id="addPetModal" class="hidden absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-3xl p-6 flex flex-col gap-4 shadow-2xl">
+        <h3 class="text-lg font-bold">Add New Pet</h3>
+        <div>
+          <label class="text-xs text-slate-400 font-semibold">Pet Name</label>
+          <input type="text" id="newPetName" placeholder="e.g. Frankie" class="w-full mt-1 p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm focus:outline-none focus:border-indigo-500" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 font-semibold mb-1 block">Gender / Pronouns</label>
+          <div class="flex justify-between gap-2 text-xs">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="newGender" value="BOY" checked class="accent-indigo-500" /> Boy
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="newGender" value="GIRL" class="accent-indigo-500" /> Girl
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="newGender" value="UNSPECIFIED" class="accent-indigo-500" /> Unspecified
+            </label>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-2">
+          <button onclick="closeModal('addPetModal')" class="px-4 py-2 text-xs text-slate-300 hover:text-white">Cancel</button>
+          <button onclick="addNewPet()" class="px-4 py-2 text-xs bg-indigo-500 hover:bg-indigo-600 rounded-xl font-bold">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Phrase List -->
+    <div id="phraseListModal" class="hidden absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-slate-800 border border-slate-700 w-full max-w-sm max-h-[80%] rounded-3xl p-6 flex flex-col gap-4 shadow-2xl">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold flex items-center gap-2"><i data-lucide="list" class="w-4 h-4"></i> Saved Phrases</h3>
+          <button onclick="closeModal('phraseListModal')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div id="phraseListContainer" class="flex flex-col gap-2 overflow-y-auto pr-1 flex-1">
+          <!-- Rendered dynamically -->
+        </div>
+        <div class="flex justify-between items-center pt-2">
+          <button onclick="resetPhrasesToDefault()" class="text-xs text-red-400 hover:text-red-300">Reset to Defaults</button>
+          <button onclick="closeModal('phraseListModal')" class="px-4 py-2 text-xs bg-slate-700 hover:bg-slate-600 rounded-xl">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Add Phrase -->
+    <div id="addPhraseModal" class="hidden absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-3xl p-6 flex flex-col gap-4 shadow-2xl">
+        <h3 class="text-base font-bold">Add Custom Phrase</h3>
+        <div>
+          <span class="text-xs text-slate-400 font-semibold mb-1.5 block">Tap a tag to insert:</span>
+          <div class="flex flex-wrap gap-1.5">
+            <button onclick="insertTag('{name}')" class="text-[11px] bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-lg border border-slate-600">{name}</button>
+            <button onclick="insertTag('{good_boy_girl}')" class="text-[11px] bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-lg border border-slate-600">{good_boy_girl}</button>
+            <button onclick="insertTag('{handsome_pretty}')" class="text-[11px] bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-lg border border-slate-600">{handsome_pretty}</button>
+            <button onclick="insertTag('{he_she_they}')" class="text-[11px] bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-lg border border-slate-600">{he_she_they}</button>
+            <button onclick="insertTag('{him_her_them}')" class="text-[11px] bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-lg border border-slate-600">{him_her_them}</button>
+            <button onclick="insertTag('{his_her_their}')" class="text-[11px] bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded-lg border border-slate-600">{his_her_their}</button>
+          </div>
+        </div>
+        <textarea id="newPhraseInput" rows="3" placeholder="is the best pet ever!" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-sm focus:outline-none focus:border-indigo-500"></textarea>
+        <div class="flex justify-end gap-2">
+          <button onclick="closeModal('addPhraseModal')" class="px-4 py-2 text-xs text-slate-300 hover:text-white">Cancel</button>
+          <button onclick="saveNewPhrase()" class="px-4 py-2 text-xs bg-indigo-500 hover:bg-indigo-600 rounded-xl font-bold">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Voice Settings -->
+    <div id="voiceModal" class="hidden absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-3xl p-6 flex flex-col gap-4 shadow-2xl max-h-[85%]">
+        <h3 class="text-base font-bold flex items-center gap-2"><i data-lucide="mic" class="w-4 h-4"></i> Voice Controls</h3>
+        
+        <!-- Pitch Slider -->
+        <div>
+          <div class="flex justify-between text-xs text-slate-300 font-semibold">
+            <span>Pitch</span>
+            <span id="pitchVal">1.0x</span>
+          </div>
+          <input type="range" min="0.5" max="2.0" step="0.1" value="1.0" id="pitchSlider" class="w-full mt-1 accent-indigo-500" oninput="updatePitchDisplay(this.value)" />
+        </div>
+
+        <!-- Speed Slider -->
+        <div>
+          <div class="flex justify-between text-xs text-slate-300 font-semibold">
+            <span>Speed</span>
+            <span id="speedVal">1.0x</span>
+          </div>
+          <input type="range" min="0.5" max="2.0" step="0.1" value="1.0" id="speedSlider" class="w-full mt-1 accent-indigo-500" oninput="updateSpeedDisplay(this.value)" />
+        </div>
+
+        <!-- Voice Selector -->
+        <div class="flex flex-col gap-1">
+          <span class="text-xs text-slate-400 font-semibold">Voice Engine</span>
+          <select id="voiceSelect" class="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs focus:outline-none focus:border-indigo-500 text-white">
+            <!-- Populated via Web Speech API -->
+          </select>
+        </div>
+
+        <div class="flex justify-between items-center pt-2">
+          <button onclick="testVoice()" class="px-4 py-2 text-xs bg-slate-700 hover:bg-slate-600 rounded-xl font-semibold">Test</button>
+          <button onclick="saveVoiceSettings()" class="px-4 py-2 text-xs bg-indigo-500 hover:bg-indigo-600 rounded-xl font-bold">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Help -->
+    <div id="helpModal" class="hidden absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-3xl p-6 flex flex-col gap-4 shadow-2xl">
+        <h3 class="text-base font-bold flex items-center gap-2"><i data-lucide="help-circle" class="w-4 h-4 text-indigo-400"></i> How to use Good Pet</h3>
+        <div class="text-xs text-slate-300 space-y-3 leading-relaxed">
+          <p><strong>🐾 Managing Pets:</strong> Tap '+' to add a pet. Click on their name chips to switch between profiles.</p>
+          <p><strong>✨ Quick Praise:</strong> Tap the big card or 'Random Praise' to hear a compliment. 'Surprise Me!' grabs new phrases automatically.</p>
+          <p><strong>🎙️ Voices:</strong> Choose from any browser voice installed on your phone or laptop and tweak the pitch or speed.</p>
+          <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-700/50">
+            <p class="text-[11px] text-slate-400">🔒 <strong>Privacy:</strong> All pet names, custom compliments, and background photos stay 100% saved in your own browser's local storage.</p>
+          </div>
+        </div>
+        <button onclick="closeModal('helpModal')" class="w-full py-2 bg-indigo-500 hover:bg-indigo-600 rounded-xl font-bold text-xs">Got it!</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Application Logic -->
+  <script>
+    const DEFAULT_PHRASES = [
+      "{name} is the best {good_boy_girl} ever!",
+      "{name} deserves all the treats!",
+      "10 out of 10 would pet {name} again.",
+      "{name} is an absolute angel!",
+      "World's most {handsome_pretty}: {name}!",
+      "Look at {name}, {he_she_they} did such a great job!"
+    ];
+
+    const SUGGESTIONS_POOL = [
+      "Who's a {good_boy_girl}? {name} is!",
+      "{name} is such a smart {good_boy_girl}.",
+      "I love {name} so much!",
+      "{name} has the cutest little face.",
+      "Give {name} a big hug for being so good!",
+      "{name} is the light of my life.",
+      "What a majestic {good_boy_girl} {name} is!",
+      "{name} is doing a great job!",
+      "{name} is the champion of nap time.",
+      "Everyone say hi to {name}, the best {good_boy_girl}!",
+      "{name} deserves a thousand belly rubs.",
+      "Is it treat time? I think {name} says yes!",
+      "I'm so proud of {name}.",
+      "{name} is the most precious {good_boy_girl}.",
+      "11 out of 10 for {name}!",
+      "Such a polite {good_boy_girl}.",
+      "{name} makes every day better!"
+    ];
+
+    // State
+    let pets = JSON.parse(localStorage.getItem('goodpet_pets')) || [
+      { id: "1", name: "Frankie", gender: "BOY", imageUri: null }
+    ];
+    let selectedPetId = localStorage.getItem('goodpet_selected_pet') || pets[0].id;
+    let customPhrases = JSON.parse(localStorage.getItem(`goodpet_phrases_${selectedPetId}`)) || DEFAULT_PHRASES;
+    let currentPhraseIndex = 0;
+    let voicePitch = parseFloat(localStorage.getItem('goodpet_voice_pitch')) || 1.0;
+    let voiceSpeed = parseFloat(localStorage.getItem('goodpet_voice_speed')) || 1.0;
+    let selectedVoiceURI = localStorage.getItem('goodpet_selected_voice') || null;
+    let availableVoices = [];
+
+    // Init Web Speech API
+    function populateVoices() {
+      if (!('speechSynthesis' in window)) return;
+      availableVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+      const select = document.getElementById('voiceSelect');
+      select.innerHTML = '';
+      
+      availableVoices.forEach((voice) => {
+        const option = document.createElement('option');
+        option.value = voice.voiceURI;
+        option.textContent = `${voice.name} (${voice.lang})`;
+        if (selectedVoiceURI && voice.voiceURI === selectedVoiceURI) {
+          option.selected = true;
+        }
+        select.appendChild(option);
+      });
+    }
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = populateVoices;
+      populateVoices();
+    }
+
+    function formatPhrase(template, pet) {
+      const goodBoyGirl = pet.gender === 'BOY' ? 'good boy' : (pet.gender === 'GIRL' ? 'good girl' : 'good pet');
+      const handsomePretty = pet.gender === 'BOY' ? 'handsome boy' : (pet.gender === 'GIRL' ? 'pretty girl' : 'cutie');
+      const heSheThey = pet.gender === 'BOY' ? 'he' : (pet.gender === 'GIRL' ? 'she' : 'they');
+      const himHerThem = pet.gender === 'BOY' ? 'him' : (pet.gender === 'GIRL' ? 'her' : 'them');
+      const hisHerTheir = pet.gender === 'BOY' ? 'his' : (pet.gender === 'GIRL' ? 'her' : 'their');
+
+      return template
+        .replaceAll('{name}', pet.name)
+        .replaceAll('{good_boy_girl}', goodBoyGirl)
+        .replaceAll('{handsome_pretty}', handsomePretty)
+        .replaceAll('{he_she_they}', heSheThey)
+        .replaceAll('{him_her_them}', himHerThem)
+        .replaceAll('{his_her_their}', hisHerTheir);
+    }
+
+    function getActivePet() {
+      return pets.find(p => p.id === selectedPetId) || pets[0];
+    }
+
+    function updateUI() {
+      const pet = getActivePet();
+      
+      // Update background
+      const bg = document.getElementById('petBackground');
+      if (pet.imageUri) {
+        bg.style.backgroundImage = `url(${pet.imageUri})`;
+        bg.classList.remove('hidden');
+      } else {
+        bg.classList.add('hidden');
+      }
+
+      // Update Pet Chips
+      const chipsContainer = document.getElementById('petChipsContainer');
+      chipsContainer.innerHTML = '';
+      
+      pets.forEach(p => {
+        const isSelected = p.id === selectedPetId;
+        const icon = p.gender === 'BOY' ? '♂' : (p.gender === 'GIRL' ? '♀' : '🐾');
+        const chip = document.createElement('button');
+        chip.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition border ${
+          isSelected ? 'bg-indigo-500 border-indigo-400 text-white' : 'bg-white/10 border-white/10 text-white/80 hover:bg-white/20'
+        }`;
+        chip.innerHTML = `<span>${p.name} ${icon}</span>`;
+        chip.onclick = () => selectPet(p.id);
+        chipsContainer.appendChild(chip);
+      });
+
+      // Add edit active pet button
+      const editBtn = document.createElement('button');
+      editBtn.className = 'p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition';
+      editBtn.innerHTML = '<i data-lucide="edit-3" class="w-3.5 h-3.5"></i>';
+      editBtn.onclick = () => openEditPetModal();
+      chipsContainer.appendChild(editBtn);
+
+      // Add new pet button
+      const addBtn = document.createElement('button');
+      addBtn.className = 'p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition';
+      addBtn.innerHTML = '<i data-lucide="plus" class="w-3.5 h-3.5"></i>';
+      addBtn.onclick = () => openModal('addPetModal');
+      chipsContainer.appendChild(addBtn);
+
+      // Update Phrase text & counter
+      if (customPhrases.length === 0) customPhrases = DEFAULT_PHRASES;
+      currentPhraseIndex = Math.max(0, Math.min(currentPhraseIndex, customPhrases.length - 1));
+      
+      const formatted = formatPhrase(customPhrases[currentPhraseIndex], pet);
+      document.getElementById('phraseText').textContent = formatted;
+      document.getElementById('phraseCounter').textContent = `${currentPhraseIndex + 1} / ${customPhrases.length}`;
+
+      lucide.createIcons();
+    }
+
+    function selectPet(id) {
+      selectedPetId = id;
+      localStorage.setItem('goodpet_selected_pet', id);
+      customPhrases = JSON.parse(localStorage.getItem(`goodpet_phrases_${selectedPetId}`)) || DEFAULT_PHRASES;
+      currentPhraseIndex = 0;
+      updateUI();
+    }
+
+    function speak(text) {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.pitch = voicePitch;
+      utterance.rate = voiceSpeed;
+
+      if (selectedVoiceURI) {
+        const found = availableVoices.find(v => v.voiceURI === selectedVoiceURI);
+        if (found) utterance.voice = found;
+      }
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function speakCurrentPhrase() {
+      const pet = getActivePet();
+      const text = formatPhrase(customPhrases[currentPhraseIndex], pet);
+      speak(text);
+    }
+
+    function prevPhrase() {
+      currentPhraseIndex = (currentPhraseIndex - 1 + customPhrases.length) % customPhrases.length;
+      updateUI();
+      speakCurrentPhrase();
+    }
+
+    function nextPhrase() {
+      currentPhraseIndex = (currentPhraseIndex + 1) % customPhrases.length;
+      updateUI();
+      speakCurrentPhrase();
+    }
+
+    function randomPraise() {
+      currentPhraseIndex = Math.floor(Math.random() * customPhrases.length);
+      updateUI();
+      speakCurrentPhrase();
+    }
+
+    function surpriseMe() {
+      const unused = SUGGESTIONS_POOL.filter(p => !customPhrases.includes(p));
+      const pool = unused.length > 0 ? unused : SUGGESTIONS_POOL;
+      const chosen = pool[Math.floor(Math.random() * pool.length)];
+      
+      customPhrases.push(chosen);
+      localStorage.setItem(`goodpet_phrases_${selectedPetId}`, JSON.stringify(customPhrases));
+      currentPhraseIndex = customPhrases.length - 1;
+      updateUI();
+      speakCurrentPhrase();
+    }
+
+    // Modal Operations
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+      if (id === 'phraseListModal') renderPhraseList();
+      if (id === 'voiceModal') {
+        document.getElementById('pitchSlider').value = voicePitch;
+        document.getElementById('speedSlider').value = voiceSpeed;
+        document.getElementById('pitchVal').textContent = `${voicePitch.toFixed(1)}x`;
+        document.getElementById('speedVal').textContent = `${voiceSpeed.toFixed(1)}x`;
+        populateVoices();
+      }
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function openEditPetModal() {
+      const pet = getActivePet();
+      document.getElementById('editPetName').value = pet.name;
+      const radios = document.getElementsByName('editGender');
+      radios.forEach(r => r.checked = (r.value === pet.gender));
+      
+      document.getElementById('removePhotoBtn').style.display = pet.imageUri ? 'block' : 'none';
+      document.getElementById('deletePetBtn').style.display = pets.length > 1 ? 'block' : 'none';
+      openModal('editPetModal');
+    }
+
+    function savePetEdit() {
+      const pet = getActivePet();
+      const name = document.getElementById('editPetName').value.trim();
+      const gender = Array.from(document.getElementsByName('editGender')).find(r => r.checked)?.value || 'BOY';
+      
+      if (name) {
+        pet.name = name;
+        pet.gender = gender;
+        localStorage.setItem('goodpet_pets', JSON.stringify(pets));
+        closeModal('editPetModal');
+        updateUI();
+      }
+    }
+
+    function handlePetPhoto(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const pet = getActivePet();
+        pet.imageUri = event.target.result;
+        localStorage.setItem('goodpet_pets', JSON.stringify(pets));
+        closeModal('editPetModal');
+        updateUI();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removePetPhoto() {
+      const pet = getActivePet();
+      pet.imageUri = null;
+      localStorage.setItem('goodpet_pets', JSON.stringify(pets));
+      closeModal('editPetModal');
+      updateUI();
+    }
+
+    function deleteActivePet() {
+      if (pets.length <= 1) return;
+      pets = pets.filter(p => p.id !== selectedPetId);
+      selectedPetId = pets[0].id;
+      localStorage.setItem('goodpet_pets', JSON.stringify(pets));
+      localStorage.setItem('goodpet_selected_pet', selectedPetId);
+      closeModal('editPetModal');
+      updateUI();
+    }
+
+    function addNewPet() {
+      const name = document.getElementById('newPetName').value.trim();
+      const gender = Array.from(document.getElementsByName('newGender')).find(r => r.checked)?.value || 'BOY';
+      if (name) {
+        const newPet = { id: Date.now().toString(), name, gender, imageUri: null };
+        pets.push(newPet);
+        localStorage.setItem('goodpet_pets', JSON.stringify(pets));
+        selectPet(newPet.id);
+        document.getElementById('newPetName').value = '';
+        closeModal('addPetModal');
+      }
+    }
+
+    function insertTag(tag) {
+      const textarea = document.getElementById('newPhraseInput');
+      const val = textarea.value;
+      const space = (val.length > 0 && !val.endsWith(' ')) ? ' ' : '';
+      textarea.value = val + space + tag;
+      textarea.focus();
+    }
+
+    function saveNewPhrase() {
+      const input = document.getElementById('newPhraseInput');
+      let phrase = input.value.trim();
+      if (phrase) {
+        if (!phrase.includes('{name}')) phrase = `{name} ${phrase}`;
+        customPhrases.push(phrase);
+        localStorage.setItem(`goodpet_phrases_${selectedPetId}`, JSON.stringify(customPhrases));
+        input.value = '';
+        closeModal('addPhraseModal');
+        updateUI();
+      }
+    }
+
+    function renderPhraseList() {
+      const container = document.getElementById('phraseListContainer');
+      const pet = getActivePet();
+      container.innerHTML = '';
+
+      customPhrases.forEach((phrase, idx) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-700/50 text-xs';
+        item.innerHTML = `
+          <span class="flex-1 cursor-pointer pr-2 leading-relaxed" onclick="selectPhrase(${idx})">${formatPhrase(phrase, pet)}</span>
+          ${customPhrases.length > 1 ? `
+            <button onclick="deletePhrase(${idx})" class="text-red-400 hover:text-red-300 p-1">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          ` : ''}
+        `;
+        container.appendChild(item);
+      });
+      lucide.createIcons();
+    }
+
+    function selectPhrase(idx) {
+      currentPhraseIndex = idx;
+      updateUI();
+      speakCurrentPhrase();
+      closeModal('phraseListModal');
+    }
+
+    function deletePhrase(idx) {
+      customPhrases.splice(idx, 1);
+      localStorage.setItem(`goodpet_phrases_${selectedPetId}`, JSON.stringify(customPhrases));
+      renderPhraseList();
+      updateUI();
+    }
+
+    function resetPhrasesToDefault() {
+      customPhrases = [...DEFAULT_PHRASES];
+      localStorage.setItem(`goodpet_phrases_${selectedPetId}`, JSON.stringify(customPhrases));
+      renderPhraseList();
+      updateUI();
+    }
+
+    function updatePitchDisplay(val) {
+      voicePitch = parseFloat(val);
+      document.getElementById('pitchVal').textContent = `${voicePitch.toFixed(1)}x`;
+    }
+
+    function updateSpeedDisplay(val) {
+      voiceSpeed = parseFloat(val);
+      document.getElementById('speedVal').textContent = `${voiceSpeed.toFixed(1)}x`;
+    }
+
+    function testVoice() {
+      const select = document.getElementById('voiceSelect');
+      selectedVoiceURI = select.value;
+      speak("I am a good pet!");
+    }
+
+    function saveVoiceSettings() {
+      const select = document.getElementById('voiceSelect');
+      selectedVoiceURI = select.value;
+      localStorage.setItem('goodpet_voice_pitch', voicePitch);
+      localStorage.setItem('goodpet_voice_speed', voiceSpeed);
+      localStorage.setItem('goodpet_selected_voice', selectedVoiceURI);
+      closeModal('voiceModal');
+    }
+
+    // Initial Render
+    updateUI();
+  </script>
+</body>
+</html>

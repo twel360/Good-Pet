@@ -1,0 +1,20 @@
+{
+  "name": "Good Pet App",
+  "short_name": "Good Pet",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#16222F",
+  "theme_color": "#16222F",
+  "icons": [
+    {
+      "src": "https://fav.farm/🐾",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://fav.farm/🐾",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -12,6 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="Good Pet">
   
   <title>Good Pet</title>
+  <meta name="referrer" content="no-referrer">
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
@@ -280,27 +281,24 @@
             <span class="text-[11px] text-slate-500 italic mb-1">Switch between device-native voices and free high-quality online voices.</span>
           </div>
           <select id="voiceEngineSelect" onchange="updateVoiceEngineUI()" class="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs focus:outline-none focus:border-indigo-500 text-white">
-            <option value="online">✨ Fun TikTok Voices (Free)</option>
+            <option value="online">✨ Google Translate Voices</option>
             <option value="device">📱 Device voices</option>
           </select>
         </div>
 
-        <!-- Online Voice Selector (TikTok) -->
+        <!-- Online Voice Selector -->
         <div id="onlineVoiceWrap" class="flex flex-col gap-1">
-          <span class="text-xs text-slate-400 font-semibold">TikTok Voice</span>
+          <span class="text-xs text-slate-400 font-semibold">Online Voice (Google)</span>
           <select id="onlineVoiceSelect" class="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs focus:outline-none focus:border-indigo-500 text-white">
-            <option value="en_us_001">🇺🇸 TikTok Female (Standard)</option>
-            <option value="en_us_002">🇺🇸 TikTok Jessie (Playful)</option>
-            <option value="en_us_006">🇺🇸 TikTok Male (Standard)</option>
-            <option value="en_us_ghostface">👻 Ghostface</option>
-            <option value="en_us_chewbacca">🐻 Chewbacca</option>
-            <option value="en_us_c3po">🤖 C-3PO</option>
-            <option value="en_us_stitch">👽 Stitch</option>
-            <option value="en_au_001">🇦🇺 Australian Female</option>
-            <option value="en_uk_001">🇬🇧 UK Male</option>
-            <option value="en_us_007">🇺🇸 American Narrator</option>
+            <option value="en-US">American Accent</option>
+            <option value="en-GB">British Accent</option>
+            <option value="en-AU">Australian Accent</option>
+            <option value="en-IE">Irish Accent</option>
+            <option value="en-IN">Indian Accent</option>
+            <option value="en-ZA">South African Accent</option>
+            <option value="de-DE">German Accent</option>
+            <option value="it-IT">Italian Accent</option>
           </select>
-          <p class="text-[11px] text-slate-500 italic">Fast TikTok API streaming with recognizable viral voices.</p>
         </div>
 
         <!-- Device Voice Selector -->
@@ -411,7 +409,7 @@
     let voiceSpeed = parseFloat(localStorage.getItem('goodpet_voice_speed')) || 1.0;
     let selectedVoiceURI = localStorage.getItem('goodpet_selected_voice') || null;
     let voiceEngine = localStorage.getItem('goodpet_voice_engine') || 'online';
-    let selectedOnlineVoice = localStorage.getItem('goodpet_online_voice') || 'en_us_001';
+    let selectedOnlineVoice = localStorage.getItem('goodpet_online_voice') || 'en-US';
     let availableVoices = [];
     let currentOnlineAudio = null;
     
@@ -527,58 +525,45 @@
     }
 
     async function speak(text) {
-      // 1. Online Character Voices (TikTok TTS API)
       if (voiceEngine === 'online') {
         if (currentOnlineAudio) {
           try { currentOnlineAudio.pause(); } catch (_) {}
           currentOnlineAudio = null;
         }
 
-        const voice = selectedOnlineVoice || 'en_us_001';
-        const testBtn = document.getElementById('testVoiceBtn');
-        
-        try {
-          // Show a visual indicator that it is trying to connect
-          if (testBtn) testBtn.textContent = 'Fetching...';
-          
-          // Fetch the audio as base64 data from a public TikTok TTS proxy
-          const response = await fetch('https://tiktok-tts.weilnet.workers.dev/api/generation', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: text, voice: voice })
-          });
-          
-          if (!response.ok) {
-            throw new Error(`Proxy returned HTTP ${response.status}`);
-          }
-
-          const data = await response.json();
-          
-          if (data && data.data) {
-            // Play the base64 audio instantly using the correct mpeg MIME type
-            currentOnlineAudio = new Audio(`data:audio/mpeg;base64,${data.data}`);
-            currentOnlineAudio.playbackRate = Math.max(0.5, Math.min(2.0, voiceSpeed));
-            
-            await currentOnlineAudio.play();
-            if (testBtn) testBtn.textContent = 'Test';
-            return;
-          } else {
-            throw new Error("API responded, but audio data was missing.");
-          }
-        } catch (err) {
-          // Reset the button
-          if (testBtn) testBtn.textContent = 'Test';
-          console.error('TikTok API Error:', err);
-          
-          // Pop up an alert so we actually know WHY it failed
-          alert(`TikTok Voice failed to load (Error: ${err.message}). \n\nFree proxies sometimes rate-limit GitHub Pages. Falling back to device voice for now.`);
-          
-          speakWithDevice(text);
-          return;
+        // Grab the saved voice, but force a valid default if it's an old TikTok/StreamElements format
+        let voice = selectedOnlineVoice || 'en-US';
+        if (!voice.includes('-') || voice.includes('_')) {
+          voice = 'en-US';
         }
+
+        const testBtn = document.getElementById('testVoiceBtn');
+        if (testBtn) testBtn.textContent = 'Fetching...';
+
+        // Google TTS bypasses CORS and Cloudflare blocks completely
+        const safeVoice = voice.toLowerCase();
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${safeVoice}&q=${encodeURIComponent(text)}`;
+        currentOnlineAudio = new Audio(url);
+        currentOnlineAudio.playbackRate = Math.max(0.5, Math.min(2.0, voiceSpeed));
+        
+        currentOnlineAudio.oncanplaythrough = () => {
+          if (testBtn) testBtn.textContent = 'Test';
+        };
+
+        currentOnlineAudio.onerror = () => {
+          if (testBtn) testBtn.textContent = 'Test';
+          console.warn('Online voice failed, falling back to device.');
+          speakWithDevice(text);
+        };
+
+        currentOnlineAudio.play().catch(err => {
+          if (testBtn) testBtn.textContent = 'Test';
+          speakWithDevice(text);
+        });
+        return;
       }
 
-      // 2. Local Device Voice (Fallback)
+      // Local Device Voice (Fallback)
       speakWithDevice(text);
     }
     
